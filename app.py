@@ -435,7 +435,6 @@ def load_models():
                 # Store the entire dict
                 pkls[display_name] = loaded
             except Exception as e:
-                st.error(str(e))
                 # If loading fails (e.g., sklearn version mismatch), create a mock entry
                 # This allows the app to display metrics even if models can't be loaded for prediction
                 pkls[display_name] = {
