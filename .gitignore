@@ -1,0 +1,26 @@
+# Virtual environment
+myenv/
+venv/
+env/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter notebooks (excluded per project requirement)
+*.ipynb
+.ipynb_checkpoints/
+
+# Kiro IDE internal files
+.kiro/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -11,6 +11,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import joblib, json, warnings, os
+import sklearn
 warnings.filterwarnings('ignore')
 
 st.set_page_config(
@@ -43,12 +44,38 @@ st.markdown("""
     --yellow: #E3B341;
 }
 
-html, body, [class*="css"] {
+html, body {
     font-family: 'Inter', sans-serif !important;
-    background-color: var(--bg) !important;
-    color: var(--text) !important;
+    background-color: #0D1117 !important;
+}
+/* Only set font on css-scoped divs — do NOT inherit color here;
+   Streamlit's var(--text) resolution can override explicit white labels */
+[class*="css"] {
+    font-family: 'Inter', sans-serif !important;
 }
 .stApp { background-color: #0D1117 !important; }
+
+/* ── Widget labels (number inputs, sliders, selects, etc.) ── */
+/* Target every Streamlit widget label directly so the html/body
+   inheritance chain cannot win over var(--text) */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span,
+[data-testid="stWidgetLabel"] label,
+[data-testid="stMarkdownContainer"] p,
+.stNumberInput > label,
+.stSlider     > label,
+.stSelectbox  > label,
+.stMultiSelect > label,
+.stRadio      > label,
+.stCheckbox   > label,
+.stTextInput  > label,
+.stTextArea   > label,
+div[data-baseweb="form-control"] label,
+div[data-baseweb="form-control"] p {
+    color: #E6EDF3 !important;
+    font-family: 'Inter', sans-serif !important;
+}
 .main .block-container { padding: 2rem 2.5rem 3rem; max-width: 1400px; }
 
 /* ── Sidebar ── */
@@ -78,7 +105,7 @@ html, body, [class*="css"] {
     background: #00D4AA !important;
 }
 [data-testid="stSidebar"] [data-baseweb="radio"] div div {
-    border-color: #8895A7 !important;
+    border-color: #A8B4C0 !important;
 }
 /* Sidebar general text */
 [data-testid="stSidebar"] p,
@@ -98,7 +125,7 @@ html, body, [class*="css"] {
     padding: 20px 24px !important;
 }
 [data-testid="metric-container"] label {
-    color: #7D8590 !important;
+    color: #A8B4C0 !important;
     font-size: 12px !important;
     letter-spacing: 0.8px !important;
     text-transform: uppercase !important;
@@ -140,7 +167,7 @@ html, body, [class*="css"] {
 }
 .hero-sub {
     font-size: 18px;
-    color: #7D8590;
+    color: #A8B4C0;
     font-weight: 300;
     margin-bottom: 40px;
     letter-spacing: 0.3px;
@@ -155,7 +182,7 @@ html, body, [class*="css"] {
 }
 .section-sub {
     font-size: 14px;
-    color: #7D8590;
+    color: #A8B4C0;
     margin-bottom: 24px;
     margin-top: -4px;
 }
@@ -164,7 +191,7 @@ html, body, [class*="css"] {
     font-weight: 600;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #7D8590;
+    color: #A8B4C0;
     margin-bottom: 6px;
 }
 .formula {
@@ -188,10 +215,10 @@ html, body, [class*="css"] {
     margin-bottom: 16px;
 }
 .gloss-term  { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-.gloss-def   { font-size: 14px; color: #8D96A0; line-height: 1.7; margin-bottom: 8px; }
+.gloss-def   { font-size: 14px; color: #B0BAC6; line-height: 1.7; margin-bottom: 8px; }
 .gloss-example {
     font-size: 13px;
-    color: #7D8590;
+    color: #A8B4C0;
     font-style: italic;
     background: #0D1117;
     border-radius: 6px;
@@ -231,7 +258,7 @@ html, body, [class*="css"] {
     padding: 4px !important; border: 1px solid #30363D !important; gap: 4px !important;
 }
 .stTabs [data-baseweb="tab"] {
-    color: #8D96A0 !important; font-weight: 500 !important;
+    color: #B0BAC6 !important; font-weight: 500 !important;
     font-size: 13px !important; border-radius: 8px !important; padding: 8px 18px !important;
 }
 .stTabs [aria-selected="true"] {
@@ -259,6 +286,21 @@ html, body, [class*="css"] {
     background: #161B22 !important; border: 1px solid #30363D !important;
     color: #E6EDF3 !important; border-radius: 8px !important;
 }
+/* Stepper +/− buttons */
+.stNumberInput button {
+    background: #1C2128 !important; border-color: #30363D !important;
+    color: #E6EDF3 !important;
+}
+.stNumberInput button:hover {
+    background: #30363D !important; color: #FFFFFF !important;
+}
+/* Slider current-value label */
+[data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSlider"] [data-testid="stTickBarMax"],
+[data-testid="stSlider"] .st-emotion-cache-1vzeuhh,
+[data-testid="stSlider"] p {
+    color: #E6EDF3 !important;
+}
 .streamlit-expanderHeader {
     background: #161B22 !important; border: 1px solid #30363D !important;
     border-radius: 8px !important; color: #E6EDF3 !important; font-weight: 500 !important;
@@ -279,7 +321,7 @@ hr { border-color: #30363D !important; }
 PT = dict(
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(22,27,34,0.8)',
-    font=dict(family='Inter', color='#8D96A0', size=12),
+    font=dict(family='Inter', color='#B0BAC6', size=12),
     title_font=dict(family='Inter', color='#E6EDF3', size=16),
     xaxis=dict(gridcolor='#30363D', linecolor='#30363D', zerolinecolor='#30363D'),
     yaxis=dict(gridcolor='#30363D', linecolor='#30363D', zerolinecolor='#30363D'),
@@ -387,6 +429,203 @@ def load_data():
         st.error(f"⚠️ Error loading dataset: {str(e)}")
         st.stop()
 
+def display_version_mismatch_guidance(expected_version, current_version):
+    """
+    Display structured error panel with version mismatch information and resolution guidance.
+    
+    This function creates a user-friendly error display using Streamlit components to guide
+    users through resolving sklearn version mismatches. It presents two clear resolution paths:
+    installing the compatible sklearn version or retraining models with the current version.
+    
+    Args:
+        expected_version (str): The sklearn version used to train the models (e.g., "1.2.0")
+        current_version (str): The currently installed sklearn version (e.g., "1.3.0")
+        
+    Returns:
+        None: Displays error panel directly in Streamlit UI
+        
+    Examples:
+        >>> display_version_mismatch_guidance("1.2.0", "1.3.0")
+        # Displays error panel with version comparison and resolution options
+        
+    Notes:
+        - Uses st.error() for the main alert message
+        - Uses st.columns() to display version comparison side-by-side
+        - Uses st.expander() for detailed resolution steps
+        - Provides copy-pasteable commands for both resolution paths
+        - Validates: Requirements 2.2, 2.3
+    """
+    # Main error alert
+    st.error("⚠️ Sklearn Version Mismatch Detected")
+    
+    # Display version comparison using columns for side-by-side view
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Models Trained With", f"sklearn {expected_version}")
+    with col2:
+        st.metric("Currently Installed", f"sklearn {current_version}")
+    
+    # Resolution guidance header
+    st.info("**Resolution Options:**")
+    
+    # Option 1: Install compatible sklearn version (recommended)
+    with st.expander("✅ Option 1: Install Compatible Sklearn Version (Recommended)", expanded=True):
+        st.markdown("This will allow you to use the existing trained models immediately without retraining.")
+        st.code(f"pip install scikit-learn=={expected_version}", language="bash")
+        st.markdown("**Steps:**")
+        st.markdown(f"1. Copy the command above")
+        st.markdown(f"2. Run it in your terminal or command prompt")
+        st.markdown(f"3. Restart the Streamlit app")
+        st.markdown(f"4. Models should load successfully")
+    
+    # Option 2: Retrain models with current version
+    with st.expander("🔄 Option 2: Retrain Models with Current Version"):
+        st.markdown(f"If you prefer to use the current sklearn version ({current_version}), you can retrain the models.")
+        st.markdown("**⚠️ Warning:** This may take several minutes and will overwrite existing model files.")
+        
+        # Check if training script exists
+        if os.path.exists("model_train.py"):
+            st.code("python model_train.py", language="bash")
+            st.markdown("**Steps:**")
+            st.markdown("1. Copy the command above")
+            st.markdown("2. Run it in your terminal (this will take several minutes)")
+            st.markdown("3. Wait for training to complete")
+            st.markdown("4. Restart the Streamlit app")
+        elif os.path.exists("CreditLens_Final.ipynb"):
+            st.markdown("**Steps:**")
+            st.markdown("1. Open `CreditLens_Final.ipynb` in Jupyter Notebook")
+            st.markdown("2. Run all cells to retrain the models")
+            st.markdown("3. Wait for training to complete (may take several minutes)")
+            st.markdown("4. Restart the Streamlit app")
+        else:
+            st.markdown("**Steps:**")
+            st.markdown("1. Locate your model training script or notebook")
+            st.markdown("2. Run the training process to regenerate model files")
+            st.markdown("3. Ensure models are saved to the `models/` directory")
+            st.markdown("4. Restart the Streamlit app")
+    
+    # Additional troubleshooting section
+    with st.expander("🔧 Troubleshooting"):
+        st.markdown("**If Option 1 doesn't work:**")
+        st.markdown("- Ensure you're in the correct virtual environment")
+        st.markdown("- Try uninstalling sklearn first: `pip uninstall scikit-learn`")
+        st.markdown(f"- Then reinstall: `pip install scikit-learn=={expected_version}`")
+        st.markdown("- Check for conflicting packages that may pin sklearn to a different version")
+        
+        st.markdown("**If Option 2 doesn't work:**")
+        st.markdown("- Ensure you have the training data file (`Credit_Card_Default.csv`)")
+        st.markdown("- Check that you have sufficient disk space for model files")
+        st.markdown("- Verify all required dependencies are installed (`pip install -r requirements.txt`)")
+        st.markdown("- Check the training script for any errors or missing dependencies")
+
+def extract_sklearn_version_from_pickle(file_path):
+    """
+    Extract sklearn version metadata from a pickled model file without fully loading it.
+    
+    This function attempts to extract the scikit-learn version used to train a model
+    by examining the pickle file's metadata or by parsing exception messages from
+    attempted loads. This allows version mismatch detection before full model loading.
+    
+    Args:
+        file_path (str): Path to the pickled model file (.pkl)
+        
+    Returns:
+        tuple: (success: bool, version: str, error_msg: str)
+            - success: True if version was successfully extracted, False otherwise
+            - version: The sklearn version string (e.g., "1.2.0") or None if extraction failed
+            - error_msg: Error message if extraction failed, empty string otherwise
+            
+    Examples:
+        >>> success, version, error = extract_sklearn_version_from_pickle("model.pkl")
+        >>> if success:
+        ...     print(f"Model trained with sklearn {version}")
+        ... else:
+        ...     print(f"Could not extract version: {error}")
+    
+    Notes:
+        - Handles cases where version metadata is not available (older joblib versions)
+        - Does not fully load the model to avoid memory overhead
+        - Falls back to parsing exception messages if direct metadata access fails
+    """
+    import pickle
+    import io
+    
+    try:
+        # Approach 1: Try to extract version from joblib metadata
+        # Joblib stores sklearn version information in the pickle stream
+        with open(file_path, 'rb') as f:
+            # Read the file content
+            file_content = f.read()
+            
+        # Try to find sklearn version in the pickle stream
+        # Joblib often embeds version info as strings in the pickle
+        file_str = str(file_content)
+        
+        # Look for sklearn version patterns in the pickle bytes
+        # Common patterns: "sklearn_version", "__version__", version tuples
+        import re
+        
+        # Pattern 1: Look for explicit sklearn version strings (e.g., "1.2.0", "1.3.1")
+        # Use word boundary to avoid matching partial numbers
+        version_pattern = r'(?:sklearn|scikit-learn).*?\\x00(\d+\.\d+\.\d+)'
+        matches = re.findall(version_pattern, file_str)
+        if matches:
+            # Return the first version found
+            return (True, matches[0], "")
+        
+        # Pattern 2: Look for version in common pickle metadata locations
+        # Try to find version strings that look like "1.2.0" preceded by sklearn-related text
+        broader_pattern = r'sklearn.*?(\d+\.\d+\.\d+)'
+        matches = re.findall(broader_pattern, file_str)
+        if matches:
+            # Filter out unlikely versions (e.g., starting with 0 or very high numbers)
+            for match in matches:
+                parts = match.split('.')
+                major = int(parts[0])
+                if 0 < major <= 2:  # sklearn versions are typically 0.x, 1.x, or 2.x
+                    return (True, match, "")
+        
+        # Pattern 3: Look for version tuples in pickle metadata
+        # Joblib may store version as (1, 2, 0) tuple
+        tuple_pattern = r'\((\d+),\s*(\d+),\s*(\d+)\)'
+        tuple_matches = re.findall(tuple_pattern, file_str)
+        if tuple_matches:
+            # Check if this looks like a version tuple (reasonable version numbers)
+            for match in tuple_matches:
+                major, minor, patch = match
+                if 0 < int(major) <= 2 and int(minor) <= 20:  # Reasonable sklearn version bounds
+                    version_str = f"{major}.{minor}.{patch}"
+                    return (True, version_str, "")
+        
+        # Approach 2: Try to load and catch the exception message
+        # sklearn version mismatch exceptions often contain version information
+        try:
+            with open(file_path, 'rb') as f:
+                joblib.load(f)
+            # If load succeeds, we can't extract version this way
+            # Return the current sklearn version as it's compatible
+            return (True, sklearn.__version__, "")
+        except Exception as load_error:
+            error_str = str(load_error)
+            
+            # Parse exception message for version information
+            # Common patterns in sklearn/joblib exceptions:
+            # "sklearn version 1.2.0 is required"
+            # "module 'sklearn' has no attribute..." (version mismatch)
+            # "cannot import name..." (version mismatch)
+            
+            version_in_error = re.findall(r'version\s+(\d+\.\d+\.\d+)', error_str)
+            if version_in_error:
+                return (True, version_in_error[0], "")
+            
+            # If we can't extract version from error, return failure
+            return (False, None, f"Could not extract version from pickle or error message: {error_str[:100]}")
+            
+    except FileNotFoundError:
+        return (False, None, f"File not found: {file_path}")
+    except Exception as e:
+        return (False, None, f"Error reading pickle file: {str(e)[:100]}")
+
 @st.cache_resource
 def load_models():
     """
@@ -429,20 +668,42 @@ def load_models():
     for fname, display_name in model_files:
         model_path = os.path.join(base, fname)
         if os.path.exists(model_path):
+            # Extract expected sklearn version from model metadata before attempting to load
+            success, expected_version, version_error = extract_sklearn_version_from_pickle(model_path)
+            
             try:
                 loaded = joblib.load(model_path)
                 # Models are saved as dicts with {'model': ..., 'scaler': ..., 'features': ..., 'scaled': ...}
                 # Store the entire dict
                 pkls[display_name] = loaded
-            except Exception as e:
-                # If loading fails (e.g., sklearn version mismatch), create a mock entry
-                # This allows the app to display metrics even if models can't be loaded for prediction
+            except (ModuleNotFoundError, AttributeError, ImportError) as e:
+                # Version mismatch or module compatibility error
+                # Store detailed version information for error reporting
+                current_version = sklearn.__version__
+                
                 pkls[display_name] = {
                     'model': None,
                     'scaler': None,
                     'features': [],
                     'scaled': False,
-                    '_load_error': str(e)
+                    '_load_error': str(e),
+                    '_expected_sklearn_version': expected_version if success else 'unknown',
+                    '_current_sklearn_version': current_version,
+                    '_error_type': 'version_mismatch'
+                }
+            except Exception as e:
+                # Other loading errors (not version-related)
+                current_version = sklearn.__version__
+                
+                pkls[display_name] = {
+                    'model': None,
+                    'scaler': None,
+                    'features': [],
+                    'scaled': False,
+                    '_load_error': str(e),
+                    '_expected_sklearn_version': expected_version if success else 'unknown',
+                    '_current_sklearn_version': current_version,
+                    '_error_type': 'other'
                 }
         else:
             st.warning(f"⚠️ Model file not found: {fname}")
@@ -479,12 +740,6 @@ def load_models():
     return pkls, results, comp_df
 
 df = load_data()
-
-# Clear cache if needed (force reload)
-if 'cache_cleared' not in st.session_state:
-    st.cache_resource.clear()
-    st.session_state.cache_cleared = True
-
 pkls, results_json, comp_df = load_models()
 
 # Check if we have any data to display (either models or metrics)
@@ -493,9 +748,30 @@ if not pkls and not results_json and comp_df is None:
     st.info("Debug info: Check that results_summary.json and comparison_table.csv exist in models/ folder")
     st.stop()
 
-# Show warning if models failed to load but we have metrics
-if pkls and all(pkg.get('_load_error') for pkg in pkls.values()):
-    st.warning("⚠️ Models could not be loaded (possibly due to sklearn version mismatch), but metrics data is available for visualization. Live Predictor may not work.")
+# Show warning if ANY model failed to load (not just when all fail)
+failed_pkls = {k: v for k, v in pkls.items() if v.get('_load_error')}
+if failed_pkls:
+    first_failed = next(
+        (v for v in failed_pkls.values() if v.get('_expected_sklearn_version')),
+        list(failed_pkls.values())[0]
+    )
+    expected_version = first_failed.get('_expected_sklearn_version', 'unknown')
+    current_version  = sklearn.__version__
+
+    if expected_version != current_version:
+        display_version_mismatch_guidance(expected_version, current_version)
+    else:
+        st.warning(f"⚠️ {len(failed_pkls)} model(s) could not be loaded.")
+        with st.expander("Show load errors"):
+            for name, pkg in failed_pkls.items():
+                st.code(f"{name}: {pkg.get('_load_error', 'unknown error')}")
+
+    n_ok = len(pkls) - len(failed_pkls)
+    st.info(
+        f"📊 **Note:** {n_ok}/{len(pkls)} models loaded successfully. "
+        "Metrics visualization is still available. "
+        "Run `python model_train.py` to regenerate compatible model files."
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -510,14 +786,14 @@ with st.sidebar:
                     -webkit-background-clip:text; -webkit-text-fill-color:transparent;'>
             CreditLens
         </div>
-        <div style='font-size:11px; color:#8895A7 !important; letter-spacing:1.5px; margin-top:4px;'>
+        <div style='font-size:11px; color:#A8B4C0 !important; letter-spacing:1.5px; margin-top:4px;'>
             RISK INTELLIGENCE PLATFORM
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown(
-        "<div style='font-size:11px; color:#8895A7; letter-spacing:1px; "
+        "<div style='font-size:11px; color:#A8B4C0; letter-spacing:1px; "
         "padding:0 4px 8px; text-transform:uppercase;'>Navigation</div>",
         unsafe_allow_html=True)
 
@@ -531,16 +807,36 @@ with st.sidebar:
     ], label_visibility="collapsed")
 
     st.markdown("---")
-    st.markdown("""
+    
+    # Determine model loading status for success indicator
+    models_loaded_successfully = False
+    if pkls:
+        # Check if at least one model loaded successfully (no _load_error key)
+        models_loaded_successfully = any(not pkg.get('_load_error') for pkg in pkls.values())
+    
+    # Build sidebar info with dynamic model status
+    sidebar_info = """
     <div style='font-size:12px; line-height:2.0;'>
         <div>📁 <b>30,000</b> records</div>
         <div>🔢 <b>25</b> variables</div>
         <div>⚠️ <b>22.1%</b> default rate</div>
         <div>📅 Apr – Sep 2005</div>
         <div style='margin-top:8px;'>🇹🇼 Taiwan credit market</div>
-        <div style='margin-top:8px; color:#00D4AA;'>✅ Models loaded from PKL</div>
+    """
+    
+    # Add success indicator if models loaded successfully
+    if models_loaded_successfully:
+        sklearn_version = sklearn.__version__
+        sidebar_info += f"<div style='margin-top:8px; color:#00D4AA;'>✅ Models loaded successfully with sklearn {sklearn_version}</div>"
+    else:
+        # Show generic message if models failed to load
+        sidebar_info += "<div style='margin-top:8px; color:#FF6B6B;'>⚠️ Model loading issues detected</div>"
+    
+    sidebar_info += """
     </div>
-    """, unsafe_allow_html=True)
+    """
+    
+    st.markdown(sidebar_info, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -615,7 +911,7 @@ body { background:#0D1117; font-family:'Inter',-apple-system,sans-serif; padding
 .node.active { transform:scale(1.26); box-shadow:0 0 0 6px rgba(255,255,255,.04), 0 0 18px currentColor; }
 
 .slbl { font-size:10px; text-align:center; margin-top:8px; line-height:1.3;
-        font-weight:500; color:#7D8590; transition:color .25s; max-width:80px; }
+        font-weight:500; color:#A8B4C0; transition:color .25s; max-width:80px; }
 .slbl.active { color:#E6EDF3; }
 
 .detail { border-radius:14px; border:1px solid; padding:22px 26px;
@@ -623,18 +919,18 @@ body { background:#0D1117; font-family:'Inter',-apple-system,sans-serif; padding
 .d-header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
 .d-icon { font-size:28px; line-height:1; flex-shrink:0; }
 .d-title { font-size:18px; font-weight:600; }
-.d-days { font-size:12px; color:#7D8590; margin-top:2px; }
+.d-days { font-size:12px; color:#A8B4C0; margin-top:2px; }
 .stats-row { display:flex; gap:20px; margin-bottom:16px; flex-wrap:wrap; }
 .stat { background:#0D1117; border-radius:10px; padding:12px 16px; min-width:100px; }
-.stat-lbl { font-size:10px; color:#7D8590; letter-spacing:.8px; text-transform:uppercase; margin-bottom:4px; }
+.stat-lbl { font-size:10px; color:#A8B4C0; letter-spacing:.8px; text-transform:uppercase; margin-bottom:4px; }
 .stat-val { font-size:22px; font-weight:600; line-height:1; }
-.stat-bench { font-size:10px; color:#7D8590; margin-top:3px; }
-.d-desc { font-size:13px; color:#8D96A0; line-height:1.75; margin-bottom:14px; }
-.sec-lbl { font-size:10px; color:#7D8590; letter-spacing:.8px; text-transform:uppercase; margin-bottom:8px; margin-top:12px; }
+.stat-bench { font-size:10px; color:#A8B4C0; margin-top:3px; }
+.d-desc { font-size:13px; color:#C0CAD4; line-height:1.75; margin-bottom:14px; }
+.sec-lbl { font-size:10px; color:#A8B4C0; letter-spacing:.8px; text-transform:uppercase; margin-bottom:8px; margin-top:12px; }
 .tag-row { display:flex; flex-wrap:wrap; gap:6px; }
 .tag { font-size:11px; padding:3px 10px; border-radius:16px; border:1px solid; }
 .rbar { margin-top:18px; }
-.rlbl { display:flex; justify-content:space-between; font-size:11px; color:#7D8590; margin-bottom:6px; }
+.rlbl { display:flex; justify-content:space-between; font-size:11px; color:#A8B4C0; margin-bottom:6px; }
 .rtrack { height:8px; background:#1C2330; border-radius:4px; overflow:hidden; }
 .rfill { height:100%; border-radius:4px; transition:width .8s cubic-bezier(.4,0,.2,1); }
 </style></head><body>
@@ -688,7 +984,7 @@ function render(){
     html+=`<div class="stage" onclick="sel(${i})">
       <div class="node${on?' active':''}" style="border-color:${s.color};color:${s.color};background:${on?s.color+'22':'transparent'}">${s.icon}</div>
       <div class="slbl${on?' active':''}" style="${on?'color:'+s.color:''}">${s.label}<br>
-        <span style="color:#7D8590;font-weight:400;font-size:9px">${s.days}</span>
+        <span style="color:#A8B4C0;font-weight:400;font-size:9px">${s.days}</span>
       </div>
     </div>`;
     if(i<S.length-1) html+=`<div class="conn"><div class="conn-line" style="background:linear-gradient(90deg,${s.color},${S[i+1].color});opacity:.4"></div></div>`;
@@ -1060,13 +1356,13 @@ elif page == "🤖  Model Building":
             st.markdown("<div class='label-sm' style='margin-top:16px'>Best hyperparameters</div>", unsafe_allow_html=True)
             for k,v in r.get('best_params',{}).items():
                 st.markdown(
-                    f"<div style='font-size:13px;padding:4px 0;color:#8D96A0'>"
+                    f"<div style='font-size:13px;padding:4px 0;color:#B0BAC6'>"
                     f"<span style='color:#E6EDF3;font-weight:500'>{k}</span> = "
                     f"<span style='color:#00D4AA;font-family:JetBrains Mono,monospace'>{v}</span></div>",
                     unsafe_allow_html=True)
         st.markdown("<div class='label-sm' style='margin-top:16px'>Training details</div>", unsafe_allow_html=True)
         st.markdown(
-            "<div style='font-size:12px;color:#8D96A0;line-height:2'>"
+            "<div style='font-size:12px;color:#B0BAC6;line-height:2'>"
             "SMOTE applied: ✅<br>Class balanced: ✅<br>CV folds: 5 (LR) / 3 (others)<br>"
             "Scoring: AUC-ROC<br>Test set: 6,000 rows (unseen)</div>",
             unsafe_allow_html=True)
@@ -1106,7 +1402,7 @@ elif page == "🤖  Model Building":
                     fillcolor='rgba(0,212,170,0.1)',line=dict(color='#00D4AA',width=2.5),
                     name=f"AUC={r.get('auc',0):.4f}"))
                 fig.add_trace(go.Scatter(x=[0,1],y=[0,1],
-                    line=dict(color='#7D8590',dash='dash'),name='Random (AUC=0.5)'))
+                    line=dict(color='#A8B4C0',dash='dash'),name='Random (AUC=0.5)'))
                 fig.update_layout(**PT,height=380,
                     xaxis_title='False Positive Rate',yaxis_title='True Positive Rate',
                     title=f'ROC Curve — {sel_model}', margin=dict(t=40,b=20,l=20,r=20))
@@ -1146,7 +1442,7 @@ elif page == "🤖  Model Building":
                         height:350px;display:flex;align-items:center;justify-content:center;
                         flex-direction:column;gap:12px'>
                 <div style='font-size:40px'>🤖</div>
-                <div style='color:#7D8590;font-size:14px'>Model results not found — run model_train.py first</div>
+                <div style='color:#A8B4C0;font-size:14px'>Model results not found — run model_train.py first</div>
             </div>""", unsafe_allow_html=True)
 
 
@@ -1244,7 +1540,7 @@ elif page == "📈  Model Comparison":
                     ))
             fig.add_trace(go.Scatter(
                 x=[0, 1], y=[0, 1],
-                line=dict(color='#7D8590', dash='dash'),
+                line=dict(color='#A8B4C0', dash='dash'),
                 name='Random Classifier'
             ))
             fig.update_layout(
@@ -1322,7 +1618,7 @@ elif page == "📈  Model Comparison":
                     if cm.size == 4:
                         tn, fp, fn, tp = cm.ravel()
                         st.markdown(f"""
-                        <div style='font-size:11px;color:#7D8590;line-height:2'>
+                        <div style='font-size:11px;color:#A8B4C0;line-height:2'>
                         Caught: <b style='color:#00D4AA'>{tp:,}</b> defaulters<br>
                         Missed: <b style='color:#FF4D4F'>{fn:,}</b> defaulters<br>
                         False alarms: <b style='color:#F0883E'>{fp:,}</b>
@@ -1378,7 +1674,19 @@ elif page == "🎯  Live Predictor":
     use_scaled = pkg.get('scaled', False)
     
     if pred_model is None:
-        st.error(f"⚠️ Model '{pred_model_name}' could not be loaded properly. Please check the model file.")
+        # Check if this is a version mismatch error with version information
+        if '_load_error' in pkg and '_expected_sklearn_version' in pkg and '_current_sklearn_version' in pkg:
+            expected_version = pkg['_expected_sklearn_version']
+            current_version = pkg['_current_sklearn_version']
+            
+            st.error(f"⚠️ Model requires sklearn {expected_version} but you have {current_version} installed")
+            
+            # Display resolution guidance
+            display_version_mismatch_guidance(expected_version, current_version)
+        else:
+            # Generic error for other loading failures
+            st.error(f"⚠️ Model '{pred_model_name}' could not be loaded properly. Please check the model file.")
+        
         st.stop()
 
     st.markdown("<div class='section-title'>Customer Profile</div>", unsafe_allow_html=True)
@@ -1453,24 +1761,39 @@ elif page == "🎯  Live Predictor":
         # CREDIT_USAGE_RATIO: Similar to UTIL_RATE but different calculation
         credit_usage_ratio = util_rate  # Simplified - same as UTIL_RATE
 
-        # Build input DataFrame with ALL 33 features using actual 6 months of data
-        # IMPORTANT: The model is a Pipeline that includes preprocessing (OneHotEncoder, PowerTransformer, etc.)
-        # So we pass RAW categorical values (1, 2, 3) and the pipeline handles encoding and transformations
-        X_input = pd.DataFrame([[
-            limit_bal, sex, education, marriage, age,  # 5 demographic features (sex/education/marriage will be one-hot encoded by pipeline)
-            pay_0, pay_2, pay_3, pay_4, pay_5, pay_6,  # 6 payment status features
-            bill1, bill2, bill3, bill4, bill5, bill6,  # 6 bill amount features (PowerTransformer applied by pipeline for linear models)
-            pay_a1, pay_a2, pay_a3, pay_a4, pay_a5, pay_a6,  # 6 payment amount features (log1p applied by pipeline for linear models)
-            util_rate, pay_ratio, avg_pay, total_bill, total_pay,  # 5 engineered features
-            bill_trend, pay_trend, max_pay_delay, consec_late, credit_usage_ratio  # 5 more engineered features
-        ]], columns=[
+        # Build input DataFrame with ALL known features.
+        # We then slice to exactly the columns the loaded model was trained on
+        # (stored in feature_cols from the bundle) so no extra/missing column errors occur.
+        _all_input_data = {
+            'LIMIT_BAL': limit_bal, 'GENDER': sex, 'EDUCATION': education,
+            'MARRIAGE': marriage, 'AGE': age,
+            'PAY_0': pay_0, 'PAY_2': pay_2, 'PAY_3': pay_3,
+            'PAY_4': pay_4, 'PAY_5': pay_5, 'PAY_6': pay_6,
+            'BILL_AMT1': bill1, 'BILL_AMT2': bill2, 'BILL_AMT3': bill3,
+            'BILL_AMT4': bill4, 'BILL_AMT5': bill5, 'BILL_AMT6': bill6,
+            'PAY_AMT1': pay_a1, 'PAY_AMT2': pay_a2, 'PAY_AMT3': pay_a3,
+            'PAY_AMT4': pay_a4, 'PAY_AMT5': pay_a5, 'PAY_AMT6': pay_a6,
+            'UTIL_RATE': util_rate, 'PAY_RATIO': pay_ratio,
+            'AVG_PAY_STATUS': avg_pay, 'TOTAL_BILL': total_bill,
+            'TOTAL_PAY': total_pay, 'BILL_TREND': bill_trend,
+            'PAY_TREND': pay_trend, 'MAX_PAY_DELAY': max_pay_delay,
+            'CONSEC_LATE': consec_late, 'CREDIT_USAGE_RATIO': credit_usage_ratio,
+        }
+        # Use the model's stored feature list if available; otherwise fall back to
+        # the 31-column training set (excludes CREDIT_USAGE_RATIO).
+        _default_features = [
             'LIMIT_BAL', 'GENDER', 'EDUCATION', 'MARRIAGE', 'AGE',
             'PAY_0', 'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6',
             'BILL_AMT1', 'BILL_AMT2', 'BILL_AMT3', 'BILL_AMT4', 'BILL_AMT5', 'BILL_AMT6',
             'PAY_AMT1', 'PAY_AMT2', 'PAY_AMT3', 'PAY_AMT4', 'PAY_AMT5', 'PAY_AMT6',
             'UTIL_RATE', 'PAY_RATIO', 'AVG_PAY_STATUS', 'TOTAL_BILL', 'TOTAL_PAY',
-            'BILL_TREND', 'PAY_TREND', 'MAX_PAY_DELAY', 'CONSEC_LATE', 'CREDIT_USAGE_RATIO'
-        ])
+            'BILL_TREND', 'PAY_TREND', 'MAX_PAY_DELAY', 'CONSEC_LATE',
+        ]
+        _cols = feature_cols if feature_cols else _default_features
+        X_input = pd.DataFrame(
+            [[_all_input_data.get(c, 0) for c in _cols]],
+            columns=_cols
+        )
 
         try:
             # The model IS a Pipeline that includes preprocessing
@@ -1501,8 +1824,8 @@ elif page == "🎯  Live Predictor":
                 <div style='font-size:56px;margin-bottom:12px'>{icon}</div>
                 <div style='font-size:13px;letter-spacing:2px;color:{color};font-weight:600;margin-bottom:8px'>{tier}</div>
                 <div style='font-size:64px;font-weight:700;color:{color};font-family:Inter;line-height:1'>{pct:.1f}%</div>
-                <div style='font-size:14px;color:#7D8590;margin-top:8px'>Probability of Default Next Month</div>
-                <div style='font-size:13px;color:#8D96A0;margin-top:8px'>Model: {pred_model_name}</div>
+                <div style='font-size:14px;color:#A8B4C0;margin-top:8px'>Probability of Default Next Month</div>
+                <div style='font-size:13px;color:#B0BAC6;margin-top:8px'>Model: {pred_model_name}</div>
                 <div style='font-size:14px;color:#B0BAC6;margin-top:20px;max-width:600px;margin-left:auto;margin-right:auto;line-height:1.7'>
                     {verdict}
                 </div>
@@ -1551,7 +1874,7 @@ elif page == "🎯  Live Predictor":
                 number={'suffix':'%','font':{'size':36,'color':color,'family':'Inter'}},
                 delta={'reference':22.1,'suffix':'%','font':{'size':14}},
                 gauge={
-                    'axis':{'range':[0,100],'tickcolor':'#7D8590','tickfont':{'color':'#7D8590'}},
+                    'axis':{'range':[0,100],'tickcolor':'#A8B4C0','tickfont':{'color':'#A8B4C0'}},
                     'bar':{'color':color,'thickness':0.25},
                     'bgcolor':'#1C2330','bordercolor':'#30363D',
                     'steps':[
@@ -1563,7 +1886,7 @@ elif page == "🎯  Live Predictor":
                     'threshold':{'line':{'color':'#E6EDF3','width':2},'value':22.1}
                 }))
             fig_gauge.update_layout(**PT,height=300,
-                title=dict(text='Default Probability vs Dataset Average (22.1%)',font=dict(color='#7D8590',size=12)),
+                title=dict(text='Default Probability vs Dataset Average (22.1%)',font=dict(color='#A8B4C0',size=12)),
                 margin=dict(t=50,b=10,l=30,r=30))
             st.plotly_chart(fig_gauge,use_container_width=True)
             st.markdown(f"""
